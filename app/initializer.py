@@ -1,6 +1,7 @@
 from sqlmodel import Session
 from app.core.database import engine, initiate_database
 
+
 def init() -> None:
     with Session(engine) as session:
         initiate_database(session)

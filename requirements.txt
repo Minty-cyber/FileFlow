@@ -1,0 +1,9 @@
+fastapi[standard]
+sqlmodel
+pydantic
+alembic
+psycopg2-binary
+sqlalchemy
+pydantic-settings
+jwt
+passlib

@@ -1,0 +1,17 @@
+FROM python:3.11-slim
+
+WORKDIR /code
+
+COPY ./requirements.txt /code/requirements.txt
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./entrypoint.sh /code/entrypoint.sh
+
+RUN chmod +x /code/entrypoint.sh
+
+COPY ./app /code/app
+
+ENTRYPOINT ["/code/entrypoint.sh"]
+
+#will add this later "--proxy-headers", when I add Traefik
