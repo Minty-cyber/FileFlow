@@ -1,0 +1,5 @@
+FROM backend:latest
+
+RUN pip install --no-cache-dir pytest pytest-cov coverage
+
+ENTRYPOINT []

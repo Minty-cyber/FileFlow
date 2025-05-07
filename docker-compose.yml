@@ -2,16 +2,17 @@ services:
   app:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.backend
     container_name: backend
     ports:
-      - "8000:8000"
+      - "8080:8080"
     volumes:
       - .:/code
     depends_on:
       - db
     env_file:
       - .env
+    image: backend:latest 
 
   db:
     image: postgres:15
@@ -19,11 +20,42 @@ services:
     restart: always
     env_file:
       - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
- 
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      app:
+        condition: service_started
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/code
+      - ./reports:/code/reports
+    working_dir: /code
+    ports:
+      - "8080:8080"
+    command: >
+      bash -c "
+       set -e
+       set -x
+       alembic upgrade head
+       coverage run --source=app -m pytest
+       coverage report --show-missing
+       coverage html --title \"$${1:-Test Coverage}\"
+       "
+    profiles:
+      - app_test
 
 volumes:
   postgres_data:

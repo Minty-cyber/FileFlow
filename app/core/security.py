@@ -1,10 +1,12 @@
-import jwt
 from typing import Any
 from datetime import timedelta, timezone, datetime
 from passlib.context import CryptContext
 from app.core.config import settings
+import jwt
+import pyotp
 
 
+totp = pyotp.TOTP('base32secret3232')
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"
@@ -22,5 +24,6 @@ def password_hasher(password: str) -> str:
     encrypted_password  = pwd_context.hash(password)
     return encrypted_password
 
-
-    
+def generate_otp() -> str:
+    generated_otp = totp.now()
+ 
