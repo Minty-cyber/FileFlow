@@ -1,13 +1,13 @@
 import uuid
-from typing import Annotated, Optional, List
+from typing import Annotated, Optional, List, Literal
 from fastapi import Form
 from pydantic import EmailStr, field_validator
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime
 
 class UserGroupLink(SQLModel, table=True):
-    user_id: uuid.UUID = Field(foreign_key="user.id", primary_key=True)
-    group_id: uuid.UUID = Field(foreign_key="group.id", primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="user.id", primary_key=True, ondelete="CASCADE")
+    group_id: uuid.UUID = Field(foreign_key="group.id", primary_key=True, ondelete="CASCADE")
     role: str = Field(default="member")
     date_joined: datetime = Field(default_factory=datetime.utcnow)
     user: Optional["User"] = Relationship(back_populates="group_links")
@@ -22,6 +22,7 @@ class UserBase(SQLModel):
 class GroupBase(SQLModel):
     title: str = Field(min_length=2, max_length=255)
     description: str | None = Field(default=None, max_length=255)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -60,13 +61,19 @@ class UserPublic(UserBase):
 class GroupResponse(GroupBase):
     id: uuid.UUID
     role: str
+
+class GroupPublic(GroupBase):
+    id:uuid.UUID
+    
+class GroupUpdate(GroupBase):
+    title: str | None = Field(default=None, min_length=1, max_length=255)
     
 class GroupRequest(SQLModel):
     group_id: uuid.UUID
     
 class UserGroupRequest(SQLModel):
     user_id: uuid.UUID
-    role: str = "member"
+    role: Literal ["admin", "member"] = "member"
     
 class UserGroupResponse(SQLModel):
     user_id: uuid.UUID

@@ -5,7 +5,8 @@ from app.models import (
     UserRegister, 
     UserUpdate,
     GroupRegister, 
-    Group
+    Group,
+    GroupUpdate
 )
 from app.core.security import password_hasher, verify_password
 
@@ -40,6 +41,14 @@ def edit_user(*, session:Session, db_user: User, user_in: UserUpdate) -> Any:
     session.commit()
     session.refresh(db_user)
     return db_user
+
+def edit_group(*, session:Session, db_group:Group, group_in:GroupUpdate) -> Any:
+    group_data = group_in.model_dump(exclude_unset=True)
+    db_group.sqlmodel_update(group_data)
+    session.add(db_group)
+    session.commit()
+    session.refresh(db_group)
+    return db_group
     
 
 def authenticate(*, session:Session, email: str, password: str) -> User | None:

@@ -29,7 +29,7 @@ from app.crud import (
 )
 from app.core.config import settings
 from app.core.security import generate_otp
-from app.utils import send_general_mail
+
 
 
 router = APIRouter()
@@ -227,7 +227,7 @@ def delete_user(
         )
     session.exec(
         delete(UserGroupLink).where(
-           col(UserGroupLink.user_id )== user_id
+           col(UserGroupLink.user_id)== user_id
         )
     )
     session.delete(user)

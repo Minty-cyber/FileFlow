@@ -16,7 +16,8 @@
 
 test:
 	docker compose --profile app_test run --rm test
-
+start:
+	docker compose up
 db:
 	docker exec -it db bash
 backend:
