@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional, List
 from sqlmodel import Session, select
 from app.models import (
     User, 
@@ -6,7 +6,8 @@ from app.models import (
     UserUpdate,
     GroupRegister, 
     Group,
-    GroupUpdate
+    GroupUpdate,
+    GroupPublic
 )
 from app.core.security import password_hasher, verify_password
 
@@ -66,5 +67,31 @@ def create_group(*, session: Session, group_register: GroupRegister) -> Group:
     session.refresh(new_group)
     return new_group
     
+def get_paginated_sorted_group(
+    session : Session,
+    skip: int = 0,
+    limit: int = 0,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None
     
+) -> list[Group]:
+    statement = select(Group)
+    
+    sort_attributes = ["title", "description", "created_at"]
+    sort_attribute_name = "created_at"
+    
+    if sort_by and sort_by in sort_attributes:
+        sort_attribute_name = sort_by
+        
+    sort_column = getattr(Group, sort_attribute_name)
+    
+    if sort_order and sort_order.lower() == "desc":
+        statement = statement.order_by(sort_column.desc())
+        
+    else:
+        statement = statement.order_by(sort_column.asc())
+        
+    statement = statement.offset(skip).limit(limit)
+    groups = session.exec(statement).all()
+    return groups
     

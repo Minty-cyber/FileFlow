@@ -83,15 +83,40 @@ def login_user(
         )
         logfire.info("User logged in successfuly", user_id=user.id, email=user.email)
  
-@router.post("/login/test-token", response_model=UserResponse)    
+@router.post("/login/test-token", response_model=UserPublic)    
 def test_token(current_user: CurrentUser, )-> Any:
     with logfire.span("Testing token for user with {email}", email=current_user.email):
-        logfire.info("Token Teste successfuly", user_id=current_user.id, email=current_user.email)
+        logfire.info("Token Tested successfuly", user_id=current_user.id, email=current_user.email)
         return current_user
     
 @router.get("/me", response_model=UserResponse)
-def read_user_me(current_user: CurrentUser) -> Any:
-    return current_user
+def read_user_me(
+    session: SessionDep, 
+    current_user: CurrentUser
+) -> Any:
+    user_groups = session.exec(
+        select(Group, UserGroupLink.role).join(UserGroupLink).where(
+            UserGroupLink.user_id == current_user.id
+        )
+    ).all()
+    
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        is_active=current_user.is_active,
+        is_superuser=current_user.is_superuser,
+        full_name = current_user.full_name,
+        
+        groups = [
+            GroupResponse(
+                id=g.id,
+                title=g.title,
+                description=g.description,
+                role=role
+            )
+            for g, role in user_groups
+        ]
+)
 
 @router.get("/all-users", response_model=List[UserResponse])
 def get_all_users(session: SessionDep, current_user: CurrentUser) -> Any:

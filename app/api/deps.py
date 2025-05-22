@@ -1,13 +1,15 @@
 from collections.abc import Generator
-from typing import Annotated
+from typing import Annotated, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from fastapi import WebSocket
 from pydantic import ValidationError
 from sqlmodel import Session
 from app.core import security
 from app.models import User, TokenInfo
 from app.core.database import engine
 from app.core.config import settings
+from app.core.chat_config import manager
 
 import jwt
 from jwt.exceptions import InvalidTokenError
@@ -23,7 +25,7 @@ def get_db() -> Generator[Session, None, None]:
 SessionDep = Annotated[Session, Depends(get_db)]
 TokenDep = Annotated[Session, Depends(use_oauth2)]
 
-def get_current_user(session: SessionDep, token: TokenDep) -> User:
+async def get_current_user(session: SessionDep, token: TokenDep) -> User:
     try:
         payload = jwt.decode(
             token, settings.SECRET_KEY, 
@@ -50,16 +52,16 @@ def get_active_current_superuser(current_user: CurrentUser) -> User:
         )
     return current_user
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+async def authenticate_ws(websocket: WebSocket, session: SessionDep) -> User | None:
+    authorization = websocket.headers.get("Authorization")
+    if not authorization or not authorization.startswith("Bearer "):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return None
+    token = authorization.split(" ")[1]
+    try:
+        user = await get_current_user(session, token)
+        return user
+    except Exception as e:
+        print(f"Authentication error: {str(e)}")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return None
