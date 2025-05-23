@@ -14,7 +14,7 @@ from app.models import (
 )
 
 from app.api.deps import SessionDep, CurrentUser, get_active_current_superuser
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from app.crud import create_group, edit_group, get_paginated_sorted_group
 from typing import Any, List, Optional
 from sqlmodel import func, select, delete, col
@@ -53,20 +53,19 @@ def register_group(
 def all_groups(
     session: SessionDep, 
     current_user:CurrentUser,
-    skip: int = 0,
-    limit: int = 5,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(5, ge=0),
     sort_by: Optional[str] = None,
     sort_order: Optional[str] = None
 ) -> Any:
     if current_user.is_superuser:
-        groups = get_paginated_sorted_group(
+        return get_paginated_sorted_group(
             session, 
             skip, 
             limit, 
             sort_by, 
             sort_order
         )
-        return groups
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="You do not have enough priveleges"
