@@ -190,7 +190,7 @@ def update_user(
     db_user = session.get(User, user_id)
     if not db_user:
         raise HTTPException(
-            status_code=statu.HTTP_404_NOT_FOUND,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="There is no such user in the system"
         )
     if user_in.email:
