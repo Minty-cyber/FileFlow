@@ -7,8 +7,6 @@ import logfire
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI),pool_pre_ping=True)
 
-logfire.instrument_sqlalchemy(engine)
-# logfire.info("Logfire Initialised for FastAPI")
 
 def populate_database_users(session: Session) -> None:
     user = session.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)

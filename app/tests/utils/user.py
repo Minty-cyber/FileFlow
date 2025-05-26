@@ -42,6 +42,7 @@ def authentication_token_from_email(
         user = create_user(session=db, user_register=user_in)
         
         
+        
     return user_authentication_headers(
         client=client,
         email=email,

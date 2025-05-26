@@ -15,7 +15,6 @@ def test_get_normal_user(client: TestClient,
     normal_user_token_headers: dict[str, str]) -> None:
     r = client.get(f"{settings.API_V1_STR}/users/me", headers=normal_user_token_headers) 
     user_profile =r.json()
-    print(user_profile)
     assert user_profile
     assert user_profile["is_active"] is True
     assert user_profile["is_superuser"] is False
