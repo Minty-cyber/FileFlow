@@ -9,7 +9,8 @@ from app.models import (
     Message,
     OAuth2PasswordRequestFormEmail,
     Group,
-    UserGroupLink
+    UserGroupLink,
+    ExceptionLog
 )
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -33,6 +34,16 @@ from app.core.security import generate_otp
 
 
 router = APIRouter()
+
+
+@router.get("/error-logs", response_model=List[Any])
+def get_error_logs(session: SessionDep) -> Any:
+    """
+    Returns all exception logs as a list of JSON objects.
+    """
+    logs = session.exec(select(ExceptionLog)).all()
+    return [log.model_dump() for log in logs]
+
 
 @router.post("/signup", response_model=UserResponse)
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
@@ -95,6 +106,7 @@ def read_user_me(current_user: CurrentUser) -> Any:
 
 @router.get("/all-users", response_model=List[UserResponse])
 def get_all_users(session: SessionDep, current_user: CurrentUser) -> Any:
+    # 2 / 0 remove this to get an unhandled exception for testing purposes
     if current_user.is_superuser:
         users = session.exec(select(User)).all()
         
@@ -251,5 +263,4 @@ def delete_me(session: SessionDep, current_user: CurrentUser) -> Any:
         message="User deleted successfully"
     )
  
-
     
