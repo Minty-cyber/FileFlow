@@ -102,3 +102,14 @@ class OAuth2PasswordRequestFormEmail(SQLModel):
     
 class Message(SQLModel):
     message: str
+
+
+class ExceptionLog(SQLModel, table=True):
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    username: Optional[str] = Field(default=None, index=True)
+    error_message: str
+    stack_trace: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    path: Optional[str] = Field(default=None)
+    method: Optional[str] = Field(default=None)
+    client_ip: Optional[str] = Field(default=None)
