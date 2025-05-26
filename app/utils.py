@@ -3,8 +3,11 @@ from app.core.email import EmailSender
 from app.core.config import settings
 from app.api.deps import SessionDep, CurrentUser
 from app.models import Group, GroupRequest, UserGroupLink
-from fastapi import HTTPException, status
-from sqlmodel import select
+from fastapi import HTTPException, status, Request
+from sqlmodel import select, Session
+from .models import ExceptionLog
+import traceback
+from app.core.database import engine
 
 
 def check_user_in_group(
@@ -88,3 +91,25 @@ def determine_role(
             return "admin"
         return requested_role if requested_role in ["admin", "member"] else "member"
     return "member"
+
+def log_exception_to_db(
+    session: Session,
+    exc: Exception,
+    request: Request,
+    username: str = None
+):
+    stack = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    log = ExceptionLog(
+        username=username,
+        error_message=str(exc),
+        stack_trace=stack,
+        path=str(request.url),
+        method=request.method,
+        client_ip=request.client.host if request.client else None,
+    )
+    session.add(log)
+    session.commit()
+
+def get_session() -> Session:
+    with Session(engine) as session:
+        yield session
