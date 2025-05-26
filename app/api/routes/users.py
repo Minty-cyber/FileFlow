@@ -13,11 +13,11 @@ from app.models import (
     ExceptionLog
 )
 from datetime import timedelta
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
 import uuid
 import logfire
-from typing import Any, Annotated, List
+from typing import Any, Annotated, List, Optional
 from sqlmodel import select, delete, col, func
 from app.core.config import settings
 from app.core.security import password_hasher, create_access_token
@@ -26,7 +26,8 @@ from app.crud import (
     create_user, 
     get_user_by_email, 
     authenticate, 
-    edit_user
+    edit_user,
+    get_paginated_sorted_user
 )
 from app.core.config import settings
 from app.core.security import generate_otp
@@ -94,21 +95,58 @@ def login_user(
         )
         logfire.info("User logged in successfuly", user_id=user.id, email=user.email)
  
-@router.post("/login/test-token", response_model=UserResponse)    
+@router.post("/login/test-token", response_model=UserPublic)    
 def test_token(current_user: CurrentUser, )-> Any:
     with logfire.span("Testing token for user with {email}", email=current_user.email):
-        logfire.info("Token Teste successfuly", user_id=current_user.id, email=current_user.email)
+        logfire.info("Token Tested successfuly", user_id=current_user.id, email=current_user.email)
         return current_user
     
 @router.get("/me", response_model=UserResponse)
-def read_user_me(current_user: CurrentUser) -> Any:
-    return current_user
+def read_user_me(
+    session: SessionDep, 
+    current_user: CurrentUser
+) -> Any:
+    user_groups = session.exec(
+        select(Group, UserGroupLink.role).join(UserGroupLink).where(
+            UserGroupLink.user_id == current_user.id
+        )
+    ).all()
+    
+    return UserResponse(
+        id=current_user.id,
+        email=current_user.email,
+        is_active=current_user.is_active,
+        is_superuser=current_user.is_superuser,
+        full_name = current_user.full_name,
+        
+        groups = [
+            GroupResponse(
+                id=g.id,
+                title=g.title,
+                description=g.description,
+                role=role
+            )
+            for g, role in user_groups
+        ]
+)
 
 @router.get("/all-users", response_model=List[UserResponse])
-def get_all_users(session: SessionDep, current_user: CurrentUser) -> Any:
-    # 2 / 0 remove this to get an unhandled exception for testing purposes
+def get_all_users(
+    session: SessionDep, 
+    current_user: CurrentUser,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(5, ge=1),
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None
+) -> Any:
     if current_user.is_superuser:
-        users = session.exec(select(User)).all()
+        users = get_paginated_sorted_user(
+            session, 
+            skip, 
+            limit, 
+            sort_by, 
+            sort_order
+        )
         
         user_responses = []
         

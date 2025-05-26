@@ -16,3 +16,4 @@ mjml-python
 logfire
 logfire[fastapi]
 logfire[sqlalchemy]
+locust

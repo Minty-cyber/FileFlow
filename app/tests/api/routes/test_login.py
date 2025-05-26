@@ -2,10 +2,6 @@ from fastapi.testclient import TestClient
 from app.core.config import settings
 from app.tests.utils.user import random_email, random_string
 
-
-
-
-
 def test_get_access_token(client: TestClient):
     login_data = {
         "email": settings.FIRST_SUPERUSER,

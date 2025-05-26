@@ -40,7 +40,7 @@ app = FastAPI(
 settings.setup_logfire(app)
 
 
-@app.on_event("startup") # This will run when the server starts
+@app.on_event("startup")
 def startup_event():
     logger.info("Running database initializer")
     run_initializer() 

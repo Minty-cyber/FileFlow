@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Optional, List
 from sqlmodel import Session, select
 from app.models import (
     User, 
@@ -6,7 +6,8 @@ from app.models import (
     UserUpdate,
     GroupRegister, 
     Group,
-    GroupUpdate
+    GroupUpdate,
+    GroupPublic
 )
 from app.core.security import password_hasher, verify_password
 
@@ -21,6 +22,10 @@ def create_user(*, session: Session, user_register: UserRegister) -> User:
     session.commit()
     session.refresh(new_user)   
     return new_user
+
+# def get_paginated_sort_user(
+    
+# )
 
 def get_user_by_email(*, session: Session, email: str) -> User:
     email_object = session.exec(
@@ -66,5 +71,46 @@ def create_group(*, session: Session, group_register: GroupRegister) -> Group:
     session.refresh(new_group)
     return new_group
     
+def get_paginated_sorted_group(
+    session : Session,
+    skip: int = 0,
+    limit: int = 5,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None
     
+) -> list[Group]:
+    statement = select(Group)
+    
+    sort_attributes = ["title", "description", "created_at"]
+    sort_attribute_name = "created_at"
+    
+    sort_attribute_name = sort_by if sort_by in sort_attributes else "created_at"
+    sort_column = getattr(Group, sort_attribute_name)
+    
+    statement = statement.order_by(
+        sort_column.desc() if sort_order and sort_order.lower() == "desc" else sort_column.asc()
+    )   
+    statement = statement.offset(skip).limit(limit)
+    return session.exec(statement).all()
+
+def get_paginated_sorted_user(
+    session: Session,
+    skip: int = 0,
+    limit: int = 5,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None
+) -> list[User]:
+    statement = select(User)
+    
+    sort_attributes = ["email", "full_name", "is_active"]
+    sort_attribute_name = sort_by if sort_by in sort_attributes else "email"
+    
+    sort_attribute_name = sort_by if sort_by in sort_attributes else "email"
+    sort_column = getattr(User, sort_attribute_name)
+    
+    statement = statement.order_by(
+        sort_column.desc() if sort_order and sort_order.lower() == "desc" else sort_column.asc()
+    )   
+    statement = statement.offset(skip).limit(limit)
+    return session.exec(statement).all()
     

@@ -25,7 +25,20 @@ def check_user_in_group(
     ).first()
     
     return bool(user_link)
-    
+
+def make_creator_admin(
+    session: SessionDep,
+    group_id: uuid.UUID,
+    creator_id: uuid.UUID
+):
+    new_admin = UserGroupLink(
+        user_id=creator_id,
+        group_id = group_id,
+        role = "admin"
+    )
+    session.add(new_admin)
+    session.commit()
+      
          
 def check_group_permission(
     session: SessionDep,
