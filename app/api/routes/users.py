@@ -37,20 +37,6 @@ from app.core.security import generate_otp
 router = APIRouter()
 
 
-@router.get("/error-logs", response_model=List[Any])
-def get_error_logs(session: SessionDep) -> Any:
-    """
-    Returns all exception logs as a list of JSON objects.
-    """
-    logs = session.exec(select(ExceptionLog)).all()
-    result = []
-    for log in logs:
-        log = log.model_dump()
-        log['stack_trace'] = log['stack_trace'].splitlines() if log['stack_trace'] else []
-        result.append(log)
-    return result
-
-
 @router.post("/signup", response_model=UserResponse)
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     with logfire.span("Registering User {email}", email=user_in.email):
