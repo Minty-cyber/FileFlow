@@ -107,6 +107,7 @@ class Message(SQLModel):
 class ExceptionLog(SQLModel, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
     username: Optional[str] = Field(default=None, index=True)
+    error_type: Optional[str] = Field(default=None, index=True)
     error_message: str
     stack_trace: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)

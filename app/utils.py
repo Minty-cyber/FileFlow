@@ -114,6 +114,7 @@ def log_exception_to_db(
     stack = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
     log = ExceptionLog(
         username=username,
+        error_type=type(exc).__name__,
         error_message=str(exc),
         stack_trace=stack,
         path=str(request.url),
