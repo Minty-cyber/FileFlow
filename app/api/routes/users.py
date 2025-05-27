@@ -43,7 +43,12 @@ def get_error_logs(session: SessionDep) -> Any:
     Returns all exception logs as a list of JSON objects.
     """
     logs = session.exec(select(ExceptionLog)).all()
-    return [log.model_dump() for log in logs]
+    result = []
+    for log in logs:
+        log = log.model_dump()
+        log['stack_trace'] = log['stack_trace'].splitlines() if log['stack_trace'] else []
+        result.append(log)
+    return result
 
 
 @router.post("/signup", response_model=UserResponse)
