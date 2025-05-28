@@ -9,7 +9,8 @@ from app.models import (
     Message,
     OAuth2PasswordRequestFormEmail,
     Group,
-    UserGroupLink
+    UserGroupLink,
+    ExceptionLog
 )
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -34,6 +35,7 @@ from app.core.security import generate_otp
 
 
 router = APIRouter()
+
 
 @router.post("/signup", response_model=UserResponse)
 def register_user(session: SessionDep, user_in: UserRegister) -> Any:
@@ -290,5 +292,4 @@ def delete_me(session: SessionDep, current_user: CurrentUser) -> Any:
         message="User deleted successfully"
     )
  
-
     

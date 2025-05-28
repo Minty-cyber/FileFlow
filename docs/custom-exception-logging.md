@@ -91,3 +91,15 @@ async def db_exception_handler(request: Request, exc: Exception, session: Sessio
 - Import and use the exception handler in your FastAPI app.
 
 This setup will log unhandled exceptions with stack trace, username, timestamp, request path, method, and client IP.
+
+
+```python
+from fastapi import Depends
+from sqlmodel import Session, select
+
+@app.get("/error-logs")
+def get_error_logs(db: Session = Depends(get_session)):
+    logs = db.exec(select(ExceptionLog)).all()
+    return [log.dict() for log in logs]
+```
+This endpoint will return all error logs as a list of JSON objects.
