@@ -21,4 +21,13 @@ def get_error_logs(session: SessionDep) -> Any:
     return result
 
 
-# Add more miscellaneous routes here as needed.
+@router.delete("/error-logs")
+def delete_all_error_logs(session: SessionDep):
+    """
+    Deletes all exception logs from the database.
+    """
+    logs = session.exec(select(ExceptionLog)).all()
+    for log in logs: 
+        session.delete(log)
+    session.commit()
+    return {'message': 'All logs deleted successfully'}
