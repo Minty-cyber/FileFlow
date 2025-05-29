@@ -31,3 +31,15 @@ def delete_all_error_logs(session: SessionDep):
         session.delete(log)
     session.commit()
     return {'message': 'All logs deleted successfully'}
+
+@router.delete("/error-logs/{log_id}")
+def delete_error_log(log_id: str, session: SessionDep):
+    """
+    Deletes a specific exception log by its ID.
+    """
+    log = session.get(ExceptionLog, log_id)
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+    session.delete(log)
+    session.commit()
+    return {'message': 'Log deleted successfully'}
