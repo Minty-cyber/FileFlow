@@ -219,15 +219,20 @@ def get_one_user(
     
 @router.patch(
     "/{user_id}/update-user", 
-    dependencies=[Depends(get_active_current_superuser)],
     response_model=UserPublic
 )    
 def update_user(
     *,
     session:SessionDep,
     user_id: uuid.UUID,
-    user_in: UserUpdate
+    user_in: UserUpdate,
+    current_user: CurrentUser
 ) -> Any:
+    if not (current_user.id == user_id or current_user.is_superuser):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have the required permission as this user"
+        )
     db_user = session.get(User, user_id)
     if not db_user:
         raise HTTPException(
