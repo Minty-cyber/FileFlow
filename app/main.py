@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request, Depends
 from fastapi.responses import JSONResponse
 from sqlmodel import Session, select
-from app.utils import get_session, log_exception_to_db
+from app.utils import log_exception_to_db
 from contextlib import asynccontextmanager
 from fastapi.routing import APIRoute
 from app.core.config import settings
