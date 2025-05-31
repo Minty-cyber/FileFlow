@@ -3,11 +3,10 @@ from typing import Any, List
 from sqlmodel import select, Session
 from app.models import ExceptionLog
 from app.api.deps import SessionDep
-from app.api.responses import ExceptionLogResponse
 
 router = APIRouter()
 
-@router.get("/error-logs", response_model=List[ExceptionLogResponse])
+@router.get("/error-logs", response_model=List[ExceptionLog])
 def get_error_logs(session: SessionDep) -> Any:
     """
     Returns all exception logs as a list of JSON objects.
