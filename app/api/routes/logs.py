@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, Depends
 from typing import Any, List
-from sqlmodel import select, Session
+from sqlmodel import select
 from app.models import ExceptionLog
-from app.api.deps import SessionDep
-from app.api.responses import ExceptionLogResponse
+from app.api.deps import SessionDep, get_active_current_superuser
 
 router = APIRouter()
 
-@router.get("/error-logs", response_model=List[ExceptionLogResponse])
-def get_error_logs(session: SessionDep) -> Any:
+@router.get(
+    "/error-logs",
+    dependencies=[Depends(get_active_current_superuser)], 
+    response_model=List[ExceptionLog]
+)
+async def get_error_logs(session: SessionDep) -> Any:
     """
     Returns all exception logs as a list of JSON objects.
     """
@@ -21,8 +24,11 @@ def get_error_logs(session: SessionDep) -> Any:
     return result
 
 
-@router.delete("/error-logs")
-def delete_all_error_logs(session: SessionDep):
+@router.delete(
+    "/error-logs",
+    dependencies=[Depends(get_active_current_superuser)]
+)
+async def delete_all_error_logs(session: SessionDep):
     """
     Deletes all exception logs from the database.
     """
@@ -32,8 +38,11 @@ def delete_all_error_logs(session: SessionDep):
     session.commit()
     return {'message': 'All logs deleted successfully'}
 
-@router.delete("/error-logs/{log_id}")
-def delete_error_log(log_id: str, session: SessionDep):
+@router.delete(
+    "/error-logs/{log_id}",
+    dependencies=[Depends(get_active_current_superuser)]
+)
+async def delete_error_log(session: SessionDep, log_id: str):
     """
     Deletes a specific exception log by its ID.
     """
