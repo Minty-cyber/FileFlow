@@ -21,4 +21,25 @@ def get_error_logs(session: SessionDep) -> Any:
     return result
 
 
-# Add more miscellaneous routes here as needed.
+@router.delete("/error-logs")
+def delete_all_error_logs(session: SessionDep):
+    """
+    Deletes all exception logs from the database.
+    """
+    logs = session.exec(select(ExceptionLog)).all()
+    for log in logs: 
+        session.delete(log)
+    session.commit()
+    return {'message': 'All logs deleted successfully'}
+
+@router.delete("/error-logs/{log_id}")
+def delete_error_log(log_id: str, session: SessionDep):
+    """
+    Deletes a specific exception log by its ID.
+    """
+    log = session.get(ExceptionLog, log_id)
+    if not log:
+        raise HTTPException(status_code=404, detail="Log not found")
+    session.delete(log)
+    session.commit()
+    return {'message': 'Log deleted successfully'}
