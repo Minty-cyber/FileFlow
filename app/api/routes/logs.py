@@ -24,7 +24,7 @@ async def get_error_logs(request:Request, session: SessionDep, user=None) -> Any
 
 @router.delete("/error-logs")
 @superuser_only
-def delete_all_error_logs(session: SessionDep, user=None):
+async def delete_all_error_logs(request:Request, session: SessionDep, user=None):
     """
     Deletes all exception logs from the database.
     """
@@ -36,7 +36,7 @@ def delete_all_error_logs(session: SessionDep, user=None):
 
 @router.delete("/error-logs/{log_id}")
 @superuser_only
-def delete_error_log(log_id: str, session: SessionDep, user=None):
+async def delete_error_log(request:Request, session: SessionDep, log_id: str, user=None):
     """
     Deletes a specific exception log by its ID.
     """
