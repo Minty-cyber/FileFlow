@@ -3,6 +3,11 @@ from fastapi import HTTPException, status
 from app.api.deps import use_oauth2, get_current_user
 
 def superuser_only(func):
+    """ 
+    Decorator to ensure that the user is a superuser before accessing the decorated route.
+    This decorator checks if the user is authenticated and has superuser privileges.  
+    The authenticated user is passed to the decorated function as `user`.
+    """
     @wraps(func)
     async def wrapper(*args, **kwargs):
         request = kwargs.get("request") or (args[0] if args else None)
