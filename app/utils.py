@@ -123,7 +123,3 @@ def log_exception_to_db(
     )
     session.add(log)
     session.commit()
-
-def get_session() -> Session:
-    with Session(engine) as session:
-        yield session
