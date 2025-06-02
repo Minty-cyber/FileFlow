@@ -55,3 +55,8 @@ def test_delete_specific_error_log(client, database, superuser_token_headers):
     # Confirm deletion
     log = database.get(ExceptionLog, log_id)
     assert log is None
+
+def test_delete_nonexistent_log(client, superuser_token_headers):
+    fake_id = str(uuid.uuid4())
+    response = client.delete(f"{BASE_URL}/error-logs/{fake_id}", headers=superuser_token_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
