@@ -86,3 +86,27 @@ def test_only_active_superuser_can_delete_all_logs(client, database, normal_user
     statement = select(ExceptionLog)
     logs = database.exec(statement).all()
     assert len(logs) != 0
+
+
+def test_only_active_superuser_can_delete_specific_logs(client, database, normal_user_token_headers):
+    log_id = str(uuid.uuid4())
+    log = ExceptionLog(
+        id=log_id,
+        username="deleteuser",
+        error_type="KeyError",
+        error_message="Delete me",
+        stack_trace="Traceback\n...",
+        timestamp=datetime.now(timezone.utc),
+        path="/delete",
+        method="DELETE",
+        client_ip="127.0.0.1"
+    )
+    database.add(log)
+    database.commit()
+
+    response = client.delete(f"{BASE_URL}/error-logs/{log_id}", headers=normal_user_token_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    
+    # Confirm deletion did not occur
+    log = database.get(ExceptionLog, log_id)   
+    assert log is not None
