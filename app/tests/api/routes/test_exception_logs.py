@@ -60,3 +60,29 @@ def test_delete_nonexistent_log(client, superuser_token_headers):
     fake_id = str(uuid.uuid4())
     response = client.delete(f"{BASE_URL}/error-logs/{fake_id}", headers=superuser_token_headers)
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_only_active_superuser_can_delete_all_logs(client, database, normal_user_token_headers):
+    # Add two logs
+    for i in range(2):
+        log = ExceptionLog(
+            id=uuid.uuid4(),
+            username=f"user{i}",
+            error_type="TypeError",
+            error_message=f"Error {i}",
+            stack_trace="Traceback\n...",
+            timestamp=datetime.now(timezone.utc),
+            path="/test",
+            method="POST",
+            client_ip="127.0.0.1"
+        )
+        database.add(log)
+    database.commit()
+
+    response = client.delete(f"{BASE_URL}/error-logs", headers=normal_user_token_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    # Confirm deletion did not occur
+    statement = select(ExceptionLog)
+    logs = database.exec(statement).all()
+    assert len(logs) != 0
