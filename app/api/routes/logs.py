@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, Depends
-from typing import Any, List
+from fastapi import APIRouter, HTTPException, Depends, Query
+from typing import Any, List, Optional
 from sqlmodel import select
 from app.models import ExceptionLog
 from app.api.deps import SessionDep, get_active_current_superuser
+from app.crud import get_paginated_sorted_error_logs
 
 router = APIRouter()
 
@@ -11,11 +12,25 @@ router = APIRouter()
     dependencies=[Depends(get_active_current_superuser)], 
     response_model=List[ExceptionLog]
 )
-async def get_error_logs(session: SessionDep) -> Any:
+async def get_error_logs(
+    session: SessionDep,
+    skip: int = Query(0, ge=0) ,
+    limit: int = Query(5, ge=1),
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
+    search: Optional[str] = None
+) -> Any:
     """
     Returns all exception logs as a list of JSON objects.
     """
-    logs = session.exec(select(ExceptionLog)).all()
+    logs = get_paginated_sorted_error_logs(
+        session,
+        skip,
+        limit,
+        sort_by,
+        sort_order,
+        search
+    )
     result = []
     for log in logs:
         log = log.model_dump()
