@@ -7,7 +7,8 @@ from app.models import (
     GroupRegister, 
     Group,
     GroupUpdate,
-    GroupPublic
+    GroupPublic,
+    ExceptionLog
 )
 from app.core.security import password_hasher, verify_password
 
@@ -105,7 +106,6 @@ def get_paginated_sorted_user(
     sort_attributes = ["email", "full_name", "is_active"]
     sort_attribute_name = sort_by if sort_by in sort_attributes else "email"
     
-    sort_attribute_name = sort_by if sort_by in sort_attributes else "email"
     sort_column = getattr(User, sort_attribute_name)
     
     statement = statement.order_by(
@@ -113,4 +113,46 @@ def get_paginated_sorted_user(
     )   
     statement = statement.offset(skip).limit(limit)
     return session.exec(statement).all()
+
+def get_paginated_sorted_group(
+    session : Session,
+    skip: int = 0,
+    limit: int = 5,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None
+    
+) -> list[Group]:
+    statement = select(Group)
+    
+    sort_attributes = ["title", "description", "created_at"]
+    sort_attribute_name = "created_at"
+    
+    sort_attribute_name = sort_by if sort_by in sort_attributes else "created_at"
+    sort_column = getattr(Group, sort_attribute_name)
+    
+    statement = statement.order_by(
+        sort_column.desc() if sort_order and sort_order.lower() == "desc" else sort_column.asc()
+    )   
+    statement = statement.offset(skip).limit(limit)
+    return session.exec(statement).all()
+
+def get_paginated_sorted_error_logs(
+    session: Session,
+    skip: int = 0,
+    limit: int = 5,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None
+) -> list[User]:
+    statement = select(ExceptionLog)
+    
+    sort_attributes = ["username", "error_message", "error_type", "timestamp"]
+    sort_attribute_name = sort_by if sort_by in sort_attributes else "timestamp"
+    sort_column = getattr(ExceptionLog, sort_attribute_name)
+    
+    statement = statement.order_by(
+        sort_column.desc() if sort_order and sort_order.lower() == "desc" else sort_column.asc()
+    )   
+    statement = statement.offset(skip).limit(limit)
+    return session.exec(statement).all()
+
     
