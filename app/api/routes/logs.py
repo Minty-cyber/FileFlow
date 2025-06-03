@@ -17,7 +17,8 @@ async def get_error_logs(
     skip: int = Query(0, ge=0) ,
     limit: int = Query(5, ge=1),
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = None
+    sort_order: Optional[str] = None,
+    search: Optional[str] = None
 ) -> Any:
     """
     Returns all exception logs as a list of JSON objects.
@@ -27,7 +28,8 @@ async def get_error_logs(
         skip,
         limit,
         sort_by,
-        sort_order
+        sort_order,
+        search
     )
     result = []
     for log in logs:

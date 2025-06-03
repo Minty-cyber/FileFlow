@@ -99,9 +99,17 @@ def get_paginated_sorted_user(
     skip: int = 0,
     limit: int = 5,
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = None
+    sort_order: Optional[str] = None,
+    search: Optional[str] = None
 ) -> list[User]:
     statement = select(User)
+    
+    if search:
+        search = f"%{search}%"
+        statement = statement.where(
+            (User.email.ilike(search)) | 
+            (User.full_name.ilike(search))
+        )
     
     sort_attributes = ["email", "full_name", "is_active"]
     sort_attribute_name = sort_by if sort_by in sort_attributes else "email"
@@ -119,10 +127,17 @@ def get_paginated_sorted_group(
     skip: int = 0,
     limit: int = 5,
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = None
-    
+    sort_order: Optional[str] = None,
+    search: Optional[str] = None
 ) -> list[Group]:
     statement = select(Group)
+    
+    if search:
+        search = f"%{search}%"
+        statement = statement.where(
+            (Group.title.ilike(search)) | 
+            (Group.description.ilike(search))
+        )
     
     sort_attributes = ["title", "description", "created_at"]
     sort_attribute_name = "created_at"
@@ -141,9 +156,18 @@ def get_paginated_sorted_error_logs(
     skip: int = 0,
     limit: int = 5,
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = None
+    sort_order: Optional[str] = None,
+    search: Optional[str] = None
 ) -> list[User]:
     statement = select(ExceptionLog)
+    
+    if search:
+        search = f"%{search}%"
+        statement = statement.where(
+            (ExceptionLog.error_message.ilike(search)) | 
+            (ExceptionLog.error_type.ilike(search)) |
+            (ExceptionLog.username.ilike(search))
+        )
     
     sort_attributes = ["username", "error_message", "error_type", "timestamp"]
     sort_attribute_name = sort_by if sort_by in sort_attributes else "timestamp"

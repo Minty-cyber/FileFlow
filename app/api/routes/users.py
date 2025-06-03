@@ -128,7 +128,8 @@ def get_all_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(5, ge=1),
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = None
+    sort_order: Optional[str] = None,
+    search: Optional[str] = None
 ) -> Any:
     if current_user.is_superuser:
         users = get_paginated_sorted_user(
@@ -136,7 +137,8 @@ def get_all_users(
             skip, 
             limit, 
             sort_by, 
-            sort_order
+            sort_order,
+            search
         )
         
         user_responses = []

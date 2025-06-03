@@ -56,7 +56,8 @@ def all_groups(
     skip: int = Query(0, ge=0),
     limit: int = Query(5, ge=0),
     sort_by: Optional[str] = None,
-    sort_order: Optional[str] = None
+    sort_order: Optional[str] = None,
+    search: Optional[str] = None
 ) -> Any:
     if current_user.is_superuser:
         return get_paginated_sorted_group(
@@ -64,7 +65,8 @@ def all_groups(
             skip, 
             limit, 
             sort_by, 
-            sort_order
+            sort_order,
+            search
         )
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
