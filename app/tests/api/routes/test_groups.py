@@ -91,7 +91,7 @@ def test_read_group_not_found(
     content = response.json()
     assert content["detail"] == "Group not found"
     
-def test_update_group(
+def test_superuser_can_update_any_group(
     client: TestClient,
     superuser_token_headers: dict[str, str],
     database: Session
