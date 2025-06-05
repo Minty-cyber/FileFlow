@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 from app.core.config import settings
 from app.tests.utils.group import create_random_group
+from fastapi import status 
 
 def test_create_group(
     client: TestClient,
@@ -89,3 +90,25 @@ def test_read_group_not_found(
     assert response.status_code == 404
     content = response.json()
     assert content["detail"] == "Group not found"
+    
+def test_update_group(
+    client: TestClient,
+    superuser_token_headers: dict[str, str],
+    database: Session
+) -> None:
+    group = create_random_group(database)
+    data = {
+        "title": "Updated Group",
+        "description": "This is an updated test group"
+    }
+    response = client.patch(
+        f"{settings.API_V1_STR}/groups/{group.id}/update-group/",
+        headers=superuser_token_headers,
+        json=data
+    )
+    
+    assert response.status_code == status.HTTP_200_OK
+    updated_group = response.json()
+    assert updated_group["title"] == data["title"]
+    assert updated_group["description"] == data["description"]
+    assert updated_group["id"] == str(group.id)
