@@ -4,6 +4,7 @@ from sqlmodel import Session
 from app.core.config import settings
 from app.tests.utils.group import create_random_group
 from fastapi import status 
+from app.models import Group
 
 def test_create_group(
     client: TestClient,
@@ -112,3 +113,41 @@ def test_superuser_can_update_any_group(
     assert updated_group["title"] == data["title"]
     assert updated_group["description"] == data["description"]
     assert updated_group["id"] == str(group.id)
+
+def test_normal_user_can_update_their_own_group(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    database: Session
+) -> None:
+   
+    data = {
+        "title": "Group created by normal user",
+        "description": "This is a group created by a normal user"
+    }
+    
+    # Create a group as a normal user
+    response = client.post(
+        f"{settings.API_V1_STR}/groups/create-group/",
+        headers=normal_user_token_headers,
+        json=data
+    )
+    group = response.json() # Created group
+    update_data = {
+        "title": "Updated Group by Normal User",
+        "description": "This is an updated group created by a normal user"
+    }
+    
+    # Update the group created by the normal user
+    response = client.patch(
+        f"{settings.API_V1_STR}/groups/{group['id']}/update-group/",
+        headers=normal_user_token_headers,
+        json=update_data
+    )
+    
+    assert response.status_code == status.HTTP_200_OK
+    updated_group = response.json() # Updated group
+    
+    # Check if the updated group matches the update data
+    assert updated_group["title"] == update_data["title"]
+    assert updated_group["description"] == update_data["description"]
+    assert updated_group["id"] == group["id"]
