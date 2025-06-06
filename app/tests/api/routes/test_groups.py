@@ -151,3 +151,20 @@ def test_normal_user_can_update_their_own_group(
     assert updated_group["title"] == update_data["title"]
     assert updated_group["description"] == update_data["description"]
     assert updated_group["id"] == group["id"]
+    
+def test_normal_user_cannot_update_other_groups(
+    client: TestClient,
+    normal_user_token_headers: dict[str, str],
+    database: Session
+) -> None:
+    group = create_random_group(database)
+    data = {
+        "title": "Updated Group by Normal User",
+        "description": "This is an updated group created by a normal user"
+    }
+    response = client.patch(
+        f"{settings.API_V1_STR}/groups/{group.id}/update-group/",
+        headers=normal_user_token_headers,
+        json=data
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
