@@ -11,66 +11,40 @@ from app.models import (
     ExceptionLog
 )
 from app.core.security import password_hasher, verify_password
+from app.handlers.crud_handler import CRUDRepository
+
+user_handler = CRUDRepository[User](User)
+group_handler = CRUDRepository[Group](Group)
 
 
 def create_user(*, session: Session, user_register: UserRegister) -> User:
-    new_user = User.model_validate(
-        user_register, update={
-            "hashed_password": password_hasher(user_register.password)
-        }
-    )
-    session.add(new_user)
-    session.commit()
-    session.refresh(new_user)   
-    return new_user
+    extra_data = {"hashed_password": password_hasher(user_register.password)}
+    return user_handler.create(session=session, data=user_register, extra_data=extra_data)
 
-# def get_paginated_sort_user(
-    
-# )
 
 def get_user_by_email(*, session: Session, email: str) -> User:
-    email_object = session.exec(
-        select(User).where(User.email == email)
-    ).first()
-    return email_object
+    return user_handler.get_by_field(session=session, field="email", value=email)
 
-def edit_user(*, session:Session, db_user: User, user_in: UserUpdate) -> Any:
-    user_data = user_in.model_dump(exclude_unset=True)
+
+def edit_user(*, session: Session, db_user: User, user_in: UserUpdate) -> User:
     extra_data = {}
-    if "password" in user_data:
-        password = user_data["password"]
-        hashed_password = password_hasher(password)
-        extra_data["hashed_password"] = hashed_password
-        
-    db_user.sqlmodel_update(user_data, update=extra_data)
-    session.add(db_user)
-    session.commit()
-    session.refresh(db_user)
-    return db_user
+    if user_in.password:
+        extra_data["hashed_password"] = password_hasher(user_in.password)
+    return user_handler.update(session=session, db_instance=db_user, update_data=user_in, extra_data=extra_data)
 
-def edit_group(*, session:Session, db_group:Group, group_in:GroupUpdate) -> Any:
-    group_data = group_in.model_dump(exclude_unset=True)
-    db_group.sqlmodel_update(group_data)
-    session.add(db_group)
-    session.commit()
-    session.refresh(db_group)
-    return db_group
-    
 
-def authenticate(*, session:Session, email: str, password: str) -> User | None:
-    user = get_user_by_email(session=session, email=email)
-    if not user:
-        return None
-    if not verify_password(password, user.hashed_password):
+def edit_group(*, session: Session, db_group: Group, group_in: GroupUpdate) -> Any:
+    return group_handler.update(session=session, db_instance=db_group, update_data=group_in)
+
+def authenticate(*, session: Session, email: str, password: str) -> User | None:
+    user = user_handler.get_by_field(session=session, field=email, value=email)
+    if not user or not verify_password(password, user.hashed_password):
         return None
     return user
+   
 
 def create_group(*, session: Session, group_register: GroupRegister) -> Group:
-    new_group = Group.model_validate(group_register)
-    session.add(new_group)
-    session.commit()
-    session.refresh(new_group)
-    return new_group
+    return group_handler.create(session=session, data=group_register)
     
 def get_paginated_sorted_group(
     session : Session,
