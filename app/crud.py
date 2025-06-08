@@ -37,11 +37,10 @@ def edit_group(*, session: Session, db_group: Group, group_in: GroupUpdate) -> A
     return group_handler.update(session=session, db_instance=db_group, update_data=group_in)
 
 def authenticate(*, session: Session, email: str, password: str) -> User | None:
-    user = user_handler.get_by_field(session=session, field=email, value=email)
+    user = user_handler.get_by_field(session=session, field="email", value=email)
     if not user or not verify_password(password, user.hashed_password):
         return None
     return user
-   
 
 def create_group(*, session: Session, group_register: GroupRegister) -> Group:
     return group_handler.create(session=session, data=group_register)
