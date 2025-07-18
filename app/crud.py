@@ -8,13 +8,17 @@ from app.models import (
     Group,
     GroupUpdate,
     GroupPublic,
+    BasePost,
+    Post,
     ExceptionLog
 )
 from app.core.security import password_hasher, verify_password
 from app.handlers.crud_handler import CRUDRepository
+from datetime import datetime, timezone
 
 user_handler = CRUDRepository[User](User)
 group_handler = CRUDRepository[Group](Group)
+post_handler = CRUDRepository[Post](Post)
 
 
 def create_user(*, session: Session, user_register: UserRegister) -> User:
@@ -151,5 +155,22 @@ def get_paginated_sorted_error_logs(
     )   
     statement = statement.offset(skip).limit(limit)
     return session.exec(statement).all()
+
+
+async def create_post(*, session, post_register: BasePost, current_user) -> Post:
+ 
+    post = Post(
+        title=post_register.title,
+        content=post_register.content,
+        tags=post_register.tags or [],
+        user_id=current_user.id,
+        user_email=current_user.email,
+        published=True,
+        created_at=datetime.now(timezone.utc)
+    )
+    await post.insert()
+    return post
+
+
 
     

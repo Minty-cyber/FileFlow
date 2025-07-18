@@ -3,8 +3,6 @@ from typing import List, Dict
 import logfire
 from app.models import User
 
-
-
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []

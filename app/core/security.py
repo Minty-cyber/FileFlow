@@ -3,10 +3,7 @@ from datetime import timedelta, timezone, datetime
 from passlib.context import CryptContext
 from app.core.config import settings
 import jwt
-import pyotp
 
-
-totp = pyotp.TOTP('base32secret3232')
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 ALGORITHM = "HS256"

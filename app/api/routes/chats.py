@@ -14,7 +14,7 @@ async def chat_endpoint(websocket: WebSocket, session: SessionDep):
     if not user:
         return  # WebSocket already closed by authenticate_ws
 
-    await manager.connect(websocket, user)  # Connect after authentication
+    await manager.connect(websocket, user) 
     try:
         while True:
             data = await websocket.receive_text()
