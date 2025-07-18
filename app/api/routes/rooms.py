@@ -9,9 +9,11 @@ router = APIRouter()
 
 @router.post("/create-room", response_model=ChatRoomResponse)
 async def create_room(
-    current_user: CurrentUser, session: SessionDep, request: ChatRoomRequest
+    current_user: CurrentUser, 
+    session: SessionDep, 
+    user_in: ChatRoomRequest
 ) -> Any:
-    await room_creation_validation(current_user=current_user, session=session, request=request)
+    await room_creation_validation(current_user=current_user, session=session, request=user_in)
 
     sorted_participants = sorted(request.participants)
     existing_room = await Room.find_one(

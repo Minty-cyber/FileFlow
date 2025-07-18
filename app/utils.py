@@ -118,7 +118,9 @@ def log_exception_to_db(
     session.commit()
 
 async def room_creation_validation(
-    current_user: CurrentUser, session: SessionDep, request: ChatRoomRequest
+    current_user: CurrentUser, 
+    session: SessionDep, 
+    user_in: ChatRoomRequest
 ) -> None:
     current_user_id = str(current_user.id)
     participants = request.participants
