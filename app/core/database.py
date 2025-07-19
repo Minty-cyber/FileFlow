@@ -4,10 +4,19 @@ from app.core.config import settings
 from app.models import User, UserRegister
 import logfire
 
+#MongoDb configurations     
+from motor.motor_asyncio import AsyncIOMotorClient
+from beanie import init_beanie
+import os
+from typing import List, Type
+from pydantic import BaseModel
+from app.models import Post, Room
 
+
+DOCUMENT_MODELS = [Post, Room]
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI),pool_pre_ping=True)
 
-
+# Combine the Postgres and Mongodb into a class.
 def populate_database_users(session: Session) -> None:
     user = session.exec(select(User).where(User.email == settings.FIRST_SUPERUSER)
     ).first()
@@ -29,4 +38,25 @@ def create_normal_user(session: Session) -> None:
             password=settings.EMAIL_TEST_USER_PASSWORD
             )
         user = create_user(session=session, user_register=user_in)
+
+class Database:
+    client: AsyncIOMotorClient = None
+    
+    async def connect_to_database(self, path: str):
+        self.client = AsyncIOMotorClient(path)
+        database_name = os.getenv("MONGO_DB", "fileflow")
+        
+        await init_beanie(
+            database=self.client[database_name],
+            document_models=DOCUMENT_MODELS
+        )
+        print(f"Connected to MongoDB and initialized database: {database_name}")
+    
+    async def close_database_connection(self):
+        if self.client:
+            self.client.close()
+            print("MongoDB connection closed")
+
+db = Database()
+
     

@@ -7,8 +7,7 @@ T = TypeVar('T', bound=SQLModel)
 class CRUDRepository(Generic[T]):
     def __init__(self, model: type[T]):
         self.model = model
-        
-        
+      
     def create(
         self,
         *,

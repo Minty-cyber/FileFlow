@@ -13,7 +13,8 @@ services:
     env_file:
       - .env
     image: backend:latest 
-
+    networks:
+      - fileflow-network
   db:
     image: postgres:15
     container_name: db
@@ -29,6 +30,20 @@ services:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    networks:
+      - fileflow-network
+
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    env_file:
+      - .env
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - fileflow-network
 
   test:
     build:
@@ -56,6 +71,14 @@ services:
        "
     profiles:
       - app_test
+    networks:
+      - fileflow-network
+
+networks:
+  fileflow-network:
+    driver: bridge
+
 
 volumes:
   postgres_data:
+  mongo_data:

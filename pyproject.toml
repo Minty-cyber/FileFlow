@@ -1,0 +1,28 @@
+[project]
+name = "fileflow"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.16.4",
+    "bcrypt>=4.3.0",
+    "beanie>=1.30.0",
+    "fastapi[standard]>=0.116.1",
+    "logfire[fastapi]>=3.24.2",
+    "passlib>=1.7.4",
+    "psycopg>=3.2.9",
+    "psycopg2-binary>=2.9.10",
+    "pydantic-settings>=2.10.1",
+    "pyjwt>=2.10.1",
+    "sqlmodel>=0.0.24",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.1",
+ 
+]
+lint = [
+    "ruff>=0.12.4",
+]
