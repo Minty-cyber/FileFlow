@@ -17,3 +17,6 @@ logfire>=0.28.0
 logfire[fastapi]>=0.28.0
 logfire[sqlalchemy]>=0.28.0
 locust>=2.31.0
+motor>=3.3.2
+beanie>=1.25.0
+pymongo>=4.6.0
