@@ -6,7 +6,8 @@ from contextlib import asynccontextmanager
 from fastapi.routing import APIRoute
 from app.core.config import settings
 from app.api.main import api_router
-from app.api.deps import get_current_user, use_oauth2
+from app.api.deps import get_current_user, use_oauth2, engine
+
 from app.initializer import run_initializer
 from app.core.config import init_mongodb
 import logging

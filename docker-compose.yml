@@ -7,7 +7,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - .:/code
+      - .:/app
     depends_on:
       - db
     env_file:
@@ -55,9 +55,9 @@ services:
       db:
         condition: service_healthy
     volumes:
-      - .:/code
-      - ./reports:/code/reports
-    working_dir: /code
+      - .:/app
+      - ./reports:/app/reports
+    working_dir: /app
     ports:
       - "8080:8080"
     command: >
