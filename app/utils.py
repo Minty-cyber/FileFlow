@@ -116,6 +116,7 @@ def log_exception_to_db(
     )
     session.add(log)
     session.commit()
+    
 
 async def room_creation_validation(
     current_user: CurrentUser, 
@@ -123,9 +124,9 @@ async def room_creation_validation(
     user_in: ChatRoomRequest
 ) -> None:
     current_user_id = str(current_user.id)
-    participants = request.participants
+    participants = user_in.participants
     room_type = ["private", "group"]
-    if request.room_type not in room_type:
+    if user_in.room_type not in room_type:
         raise HTTPException(
             status_code=400, detail=f"room_type must be one of: {', '.join(valid_types)}",
         )

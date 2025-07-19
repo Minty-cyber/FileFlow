@@ -1,52 +1,72 @@
+import logging
 from fastapi import WebSocket
-from typing import List, Dict
-import logfire
-from app.models import User
+from typing import Dict, List
+import json
+
+logger = logging.getLogger(__name__)
 
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
-        self.user_connections: Dict[str, List[WebSocket]] = {} 
+        self.user_connections: Dict[str, List[WebSocket]] = {}
+        self.connection_user_map: Dict[WebSocket, str] = {}
 
-    async def connect(self, websocket: WebSocket, user: User):
-        self.active_connections.append(websocket)
-        user_id = str(user.id) 
+    async def connect(self, websocket: WebSocket, user):
+        user_id = str(user.id)
         if user_id not in self.user_connections:
             self.user_connections[user_id] = []
+        
         self.user_connections[user_id].append(websocket)
-        logfire.info(f"WebSocket connected for user {user.id}")
+        self.connection_user_map[websocket] = user_id
+        
+        logger.info(f"User {user.email} connected. Total connections for user: {len(self.user_connections[user_id])}")
 
     def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-        
-        for user_id, connections in list(self.user_connections.items()):
-            if websocket in connections:
-                connections.remove(websocket)
-                if not connections:
+        if websocket in self.connection_user_map:
+            user_id = self.connection_user_map[websocket]
+            if user_id in self.user_connections:
+                if websocket in self.user_connections[user_id]:
+                    self.user_connections[user_id].remove(websocket)
+
+                if not self.user_connections[user_id]:
                     del self.user_connections[user_id]
-                logfire.info(f"WebSocket disconnected for user {user_id}")
-                break
+        
+            del self.connection_user_map[websocket]
+            
+            logger.info(f"User {user_id} disconnected")
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
         try:
             await websocket.send_text(message)
         except Exception as e:
-            logfire.error(f"Failed to send personal message: {str(e)}")
-
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            try:
-                await connection.send_text(message)
-            except Exception as e:
-                logfire.error(f"Failed to broadcast message to a connection: {str(e)}")
+            logger.error(f"Failed to send personal message: {e}")
+            self.disconnect(websocket)
 
     async def broadcast_to_user(self, message: str, user_id: str):
         if user_id in self.user_connections:
-            for connection in self.user_connections[user_id]:
+            connections = self.user_connections[user_id].copy()
+            
+            for connection in connections:
                 try:
                     await connection.send_text(message)
                 except Exception as e:
-                    logfire.error(f"Failed to broadcast to user {user_id}: {str(e)}")
+                    logger.error(f"Failed to broadcast to user {user_id}: {str(e)}")
+                    self.disconnect(connection)
+
+    async def broadcast(self, message: str):
+        for user_id, connections in list(self.user_connections.items()):
+            connections_copy = connections.copy()
+            
+            for connection in connections_copy:
+                try:
+                    await connection.send_text(message)
+                except Exception as e:
+                    logger.error(f"Failed to broadcast to user {user_id}: {str(e)}")
+                    self.disconnect(connection)
+
+    def get_connected_users(self) -> List[str]:
+        return list(self.user_connections.keys())
+
+    def get_user_connection_count(self, user_id: str) -> int:
+        return len(self.user_connections.get(user_id, []))
 
 manager = ConnectionManager()
