@@ -13,16 +13,16 @@ async def create_room(
     session: SessionDep, 
     user_in: ChatRoomRequest
 ) -> Any:
-    await room_creation_validation(current_user=current_user, session=session, request=user_in)
+    await room_creation_validation(current_user=current_user, session=session, user_in=user_in)
 
-    sorted_participants = sorted(request.participants)
+    sorted_participants = sorted(user_in.participants)
     existing_room = await Room.find_one(
         {
             "participants": {
                 "$all": sorted_participants,
                 "$size": len(sorted_participants),
             },
-            "room_type": request.room_type,
+            "room_type": user_in.room_type,
         }
     )
 
@@ -34,7 +34,7 @@ async def create_room(
             created_at=existing_room.created_at,
         )
 
-    new_room = Room(participants=sorted_participants, room_type=request.room_type)
+    new_room = Room(participants=sorted_participants, room_type=user_in.room_type)
     await new_room.insert()
     return ChatRoomResponse(
         room_id=str(new_room.id),
