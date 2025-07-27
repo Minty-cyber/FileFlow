@@ -65,6 +65,7 @@ services:
        set -e
        set -x
        alembic upgrade head
+       uv add coverage 
        coverage run --source=app -m pytest
        coverage report --show-missing
        coverage html --title \"$${1:-Test Coverage}\"

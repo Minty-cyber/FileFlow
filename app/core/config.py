@@ -102,7 +102,7 @@ class MongoDBManager:
                 document_models=DOCUMENT_MODELS
             )
 
-            logger.info(f"Successfully connected to MongoDB database: {database_name}")
+            logger.info(f"Initialized beanie with models: {DOCUMENT_MODELS}")
 
         except Exception as e:
             logger.error(f"Failed to connect to MongoDB: {str(e)}")

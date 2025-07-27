@@ -1,3 +1,2 @@
 FROM backend:latest
-
-RUN pip install --no-cache-dir pytest pytest-cov coverage
+RUN uv pip install pytest pytest-cov coverage
