@@ -45,6 +45,24 @@ services:
     networks:
       - fileflow-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - fileflow-network
+
   test:
     build:
       context: .
@@ -58,13 +76,12 @@ services:
       - .:/app
       - ./reports:/app/reports
     working_dir: /app
-    ports:
-      - "8080:8080"
     command: >
       bash -c "
        set -e
        set -x
        alembic upgrade head
+       uv add coverage 
        coverage run --source=app -m pytest
        coverage report --show-missing
        coverage html --title \"$${1:-Test Coverage}\"
@@ -82,3 +99,4 @@ networks:
 volumes:
   postgres_data:
   mongo_data:
+  redis_data:

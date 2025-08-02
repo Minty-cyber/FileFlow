@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated, Optional, List, Literal
 from fastapi import Form
-from pydantic import EmailStr, field_validator, BaseModel
+from pydantic import EmailStr, field_validator, BaseModel, model_validator
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import datetime, timezone
 
@@ -84,6 +84,18 @@ class GroupResponse(GroupBase):
 
 class GroupPublic(GroupBase):
     id: uuid.UUID
+    
+
+class UserInGroupResponse(BaseModel):
+    id: uuid.UUID
+    email: str
+    full_name: Optional[str]
+    role: str
+
+
+class GroupWithMembers(GroupBase):
+    id: uuid.UUID
+    members: List[UserInGroupResponse] = []
 
 
 class GroupUpdate(GroupBase):
@@ -126,7 +138,7 @@ class OAuth2PasswordRequestFormEmail(SQLModel):
         return cls(email=email, password=password)
 
 
-class Message(SQLModel):
+class ResponseMessage(SQLModel):
     message: str
 
 
@@ -145,7 +157,10 @@ class ExceptionLog(SQLModel, table=True):
 class Room(Document):
     participants: Annotated[List[str], Indexed()]
     room_type: str = "private"
+    room_name: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_by: str
+    group_id: Optional[str] = None
 
     class Settings:
         name = "rooms"
@@ -163,15 +178,31 @@ class Message(Document):
         idexes = [[("room_id", 1), ("timestamp", 1)]]
 
 
-class ChatRoomRequest(BaseModel):
+class DemoRequest(BaseModel):
+    group_id: str
+
+
+class PrivateChatRoomRequest(BaseModel):
     participants: List[str]
     room_type: str = "private"
+    room_name: Optional[str] = None
 
 
-class ChatRoomResponse(BaseModel):
+class PrivateChatRoomResponse(BaseModel):
     room_id: str
     participants: List[str]
-    room_type: str
+    room_type: Literal["private", "group"]
+    room_name: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        exclude_none = True
+
+
+class DemoResponse(BaseModel):
+    room_id: str
+    participants: List[str]
+    room_type: Literal["private", "group"]
     created_at: datetime
 
 
@@ -193,7 +224,7 @@ class Post(Document):
     updated_at: Optional[datetime] = None
 
     class Settings:
-        name = "all"
+        name = "posts"
 
 
 class PostResponse(BasePost):
@@ -203,3 +234,16 @@ class PostResponse(BasePost):
     published: bool
     created_at: datetime
     updated_at: Optional[datetime]
+
+
+class GroupChatRoomRequest(BaseModel):
+    group_id: uuid.UUID
+    room_name: Optional[str] = None 
+
+
+class GroupChatRoomResponse(BaseModel):
+    room_id: str
+    group_id: str
+    room_name: str
+    participants: List[str]
+    created_at: datetime

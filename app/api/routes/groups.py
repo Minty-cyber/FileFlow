@@ -1,4 +1,5 @@
 import uuid
+import logging
 from app.models import (
     User,
     GroupResponse, 
@@ -10,8 +11,15 @@ from app.models import (
     GroupRequest,
     GroupUpdate,
     GroupPublic,
-    Message
+    ResponseMessage,
+    GroupWithMembers,
+    UserInGroupResponse,
+    
+    #MongoDB models
+    Room
+    
 )
+
 
 from app.api.deps import SessionDep, CurrentUser, get_active_current_superuser
 from fastapi import APIRouter, Depends, HTTPException, status, Query
@@ -25,6 +33,9 @@ from app.utils import(
     check_user_in_group
 )
 router = APIRouter()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 @router.post("/create-group", response_model=GroupPublic)
 def register_group(
@@ -49,10 +60,10 @@ def register_group(
     )
 
 
-@router.get("/all-groups", response_model=List[GroupPublic])
+@router.get("/all-groups", response_model=List[GroupWithMembers])
 def all_groups(
     session: SessionDep, 
-    current_user:CurrentUser,
+    current_user: CurrentUser,
     skip: int = Query(0, ge=0),
     limit: int = Query(5, ge=0),
     sort_by: Optional[str] = None,
@@ -60,7 +71,7 @@ def all_groups(
     search: Optional[str] = None
 ) -> Any:
     if current_user.is_superuser:
-        return get_paginated_sorted_group(
+        groups = get_paginated_sorted_group(
             session, 
             skip, 
             limit, 
@@ -68,9 +79,37 @@ def all_groups(
             sort_order,
             search
         )
+        
+        group_responses = []
+        for group in groups:
+            members_with_roles = session.exec(
+                select(User, UserGroupLink.role)
+                .join(UserGroupLink, User.id == UserGroupLink.user_id)
+                .where(UserGroupLink.group_id == group.id)
+            ).all()
+            
+            group_responses.append(
+                GroupWithMembers(
+                    id=group.id,
+                    title=group.title,
+                    description=group.description,
+                    created_at=group.created_at,
+                    members=[
+                        UserInGroupResponse(
+                            id=user.id,
+                            email=user.email,
+                            full_name=user.full_name,
+                            role=role
+                        )
+                        for user, role in members_with_roles
+                    ]
+                )
+            )
+        return group_responses
+        
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
-        detail="You do not have enough priveleges"
+        detail="You do not have enough privileges"
     )
 @router.get("/{group_id}/get-group", response_model=GroupPublic)   
 def get_a_group(
@@ -133,7 +172,7 @@ def update_group(
  
 @router.delete(
     "/{group_id}/delete-group", 
-    response_model=Message
+    response_model=ResponseMessage
 )   
 def delete_group(
     session:SessionDep,
@@ -160,13 +199,13 @@ def delete_group(
         )
     )
     session.commit()
-    return Message(
+    return ResponseMessage(
         message = "Group deleted successfully"
     )
 
 
 @router.post("/{group_id}/add-user", response_model=UserGroupResponse)  
-def add_user_to_group(
+async def add_user_to_group(
     session: SessionDep,
     group_id: uuid.UUID,
     current_user: CurrentUser,
@@ -177,7 +216,7 @@ def add_user_to_group(
     if not group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Group not found "
+            detail="Group not found"
         )
         
     require_permission(
@@ -219,6 +258,22 @@ def add_user_to_group(
     session.commit()
     session.refresh(new_user)
     
+    #Syncing group members to the Room
+    group_members = session.exec(
+        select(User.id)
+        .join(UserGroupLink)
+        .where(UserGroupLink.group_id == group_id)
+    ).all()
+    
+    participants = [
+        str(member) for member in group_members
+    ]
+    existing_room = await Room.find_one({"group_id": str(group_id), "room_type": "group"})
+    if existing_room:
+        existing_room.participants = participants
+        await existing_room.save()
+        logger.info(f"Synced participants for group room {existing_room.id} with group {group_id}")
+    
     return UserGroupResponse(
         user_id=new_user.user_id,
         group_id=new_user.group_id,
@@ -226,13 +281,13 @@ def add_user_to_group(
         date_joined=new_user.date_joined.isoformat()
     )
 
-@router.delete("/{group_id}/remove-user", response_model=Message)    
-def remove_user_from_group(
+@router.delete("/{group_id}/remove-user", response_model=ResponseMessage)    
+async def remove_user_from_group(
     session: SessionDep,
     current_user: CurrentUser,
     group_id: uuid.UUID,
     user_id: uuid.UUID
-) -> Message:
+) -> ResponseMessage:
     group = session.get(Group, group_id)
     if not group:
         raise HTTPException(
@@ -259,13 +314,30 @@ def remove_user_from_group(
     )
     user_in_group = result.rowcount
     session.commit() 
+    
+    #Syncing group members to the Room
+    group_members = session.exec(
+        select(User.id)
+        .join(UserGroupLink)
+        .where(UserGroupLink.group_id == group_id)
+    ).all()
+    
+    participants = [
+        str(member) for member in group_members
+    ]
+    existing_room = await Room.find_one({"group_id": str(group_id), "room_type": "group"})
+    if existing_room:
+        existing_room.participants = participants
+        await existing_room.save()
+        logger.info(f"Synced participants for group room {existing_room.id} with group {group_id}")
+        
     if not user_in_group:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found in this group"
         )
      
-    return Message(
+    return ResponseMessage(
         message = "User Deleted from the Group Successfully"
     ) 
     

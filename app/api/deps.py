@@ -53,20 +53,21 @@ def get_active_current_superuser(current_user: CurrentUser) -> User:
         )
     return current_user
 
-async def authenticate_ws(websocket: WebSocket, session: SessionDep) -> User | None:
+async def authenticate_ws(websocket: WebSocket, session: SessionDep, auto_accept: bool = True) -> User | None:
     protocol = websocket.headers.get('sec-websocket-protocol')
     if not protocol or not protocol.startswith("token."):
-        await websocket.close(code=1008, reason="Invalid protocol")
+        if auto_accept and websocket.application_state == WebSocketState.CONNECTING:
+            await websocket.close(code=1008, reason="Invalid protocol")
         return None
     
     token = protocol.replace("token.", "").strip()
-    
     try:
         user = await get_current_user(session, token)
-        if websocket.application_state == WebSocketState.CONNECTING:
+        if auto_accept and websocket.application_state == WebSocketState.CONNECTING:
             await websocket.accept(subprotocol=protocol)
         return user
     except Exception as e:
         print(f"Authentication error: {str(e)}")
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        if auto_accept and websocket.application_state == WebSocketState.CONNECTING:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return None

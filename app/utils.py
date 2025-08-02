@@ -9,8 +9,8 @@ from app.models import (
     Room,
     UserGroupLink,
     ExceptionLog,
-    ChatRoomRequest,
-    ChatRoomResponse,
+    PrivateChatRoomRequest,
+   
 )
 from fastapi import HTTPException, status, Request, WebSocket
 from sqlmodel import select, Session
@@ -121,7 +121,7 @@ def log_exception_to_db(
 async def room_creation_validation(
     current_user: CurrentUser, 
     session: SessionDep, 
-    user_in: ChatRoomRequest
+    user_in: PrivateChatRoomRequest
 ) -> None:
     current_user_id = str(current_user.id)
     participants = user_in.participants
@@ -130,10 +130,15 @@ async def room_creation_validation(
         raise HTTPException(
             status_code=400, detail=f"room_type must be one of: {', '.join(valid_types)}",
         )
-    if len(participants) < 2:
-        raise HTTPException(
-            status_code=400, detail="At least two participants are required"
-        )
+    if user_in.room_type == "private":
+        if len(participants) < 2:
+            raise HTTPException(
+                status_code=400, detail="At least two participants are required"
+            )
+    elif user_in.room_type == "group":
+        if not len(participants) >= 2:
+            raise HTTPException(status_code=400, detail="Two or more people can be in group")
+        
     for participant_id in participants:
         try:
             uuid.UUID(participant_id)
