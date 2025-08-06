@@ -2,10 +2,10 @@ import logging
 import uuid
 import json
 import redis.asyncio as redis
-
 from fastapi import WebSocket
-from typing import Optional, Dict, List, Tuple
+from typing import Optional, Dict, List
 from datetime import datetime
+import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +19,21 @@ class ConnectionManager:
         )
         self.pubsub = self.redis.pubsub()
         self.local_websockets: Dict[str, WebSocket] = {}
+        # asyncio.create_task(self.test_connection())
+
+    async def test_connection(self):
+        try:
+            await self.redis.ping()
+            logger.info(
+                f"Redis connection successful to {self.redis.connection_pool.connection_kwargs['host']}:{self.redis.connection_pool.connection_kwargs['port']}"
+            )
+        except redis.ConnectionError as e:
+            logger.error(f"Redis connection failed: {e}")
+            raise
 
     async def connect(
         self, websocket: WebSocket, user, room_id: str, already_accepted: bool = False
-    ) -> Tuple[str, Optional[str]]: 
+    ) -> str:
         ws_id = None
         try:
             ws_id = str(uuid.uuid4())
@@ -35,7 +46,7 @@ class ConnectionManager:
             )
             await self.redis.sadd(f"room:{room_id}:users", user_id)
             self.local_websockets[ws_id] = websocket
-            
+
             last_disconnected = await self.redis.get(
                 f"user:{user_id}:room:{room_id}:last_disconnected"
             )
@@ -45,7 +56,9 @@ class ConnectionManager:
                 f"Last disconnected: {last_disconnected}. "
                 f"Total users in room: {await self.get_user_connection_count(room_id)}"
             )
-            return ws_id, last_disconnected
+            if last_disconnected:
+                await self.cleanup_disconnect_timestamp(user_id, room_id)
+            return ws_id
         except Exception as e:
             logger.error(f"Error connecting websocket: {e}")
             if ws_id and ws_id in self.local_websockets:
@@ -57,11 +70,13 @@ class ConnectionManager:
     async def cleanup_disconnect_timestamp(self, user_id: str, room_id: str):
         try:
             await self.redis.delete(f"user:{user_id}:room:{room_id}:last_disconnected")
-            logger.info(f"Cleaned up disconnect timestamp for user {user_id} in room {room_id}")
+            logger.info(
+                f"Cleaned up disconnect timestamp for user {user_id} in room {room_id}"
+            )
         except Exception as e:
             logger.error(f"Error cleaning up disconnect timestamp: {e}")
 
-    async def disconnect(self, ws_id: str):
+    async def disconnect(self, ws_id: str, user=None):
         try:
             ws_data = await self.redis.hgetall(f"ws:{ws_id}")
             if not ws_data:
@@ -72,28 +87,53 @@ class ConnectionManager:
             room_id = ws_data.get("room_id")
 
             if user_id and room_id:
-                await self.redis.srem(f"room:{room_id}:users", user_id)
-                
+                if await self.redis.sismember(f"room:{room_id}:users", user_id):
+                    logger.info(
+                        f"Removing user {user.email if user else user_id} from room {room_id}"
+                    )
+                    removed = await self.redis.srem(f"room:{room_id}:users", user_id)
+                    logger.info(
+                        f"User removal result: {removed} (1=success, 0=not found)"
+                    )
+                    still_member = await self.redis.sismember(
+                        f"room:{room_id}:users", user_id
+                    )
+                    if still_member:
+                        logger.error(
+                            f"Failed to remove user {user_id} from room {room_id}"
+                        )
+                        members = await self.redis.smembers(f"room:{room_id}:users")
+                        logger.info(f"Current room members: {members}")
+                        if user_id in members:
+                            await self.redis.srem(f"room:{room_id}:users", user_id)
+                            logger.info("Attempted force removal of user")
+
                 disconnect_time = datetime.utcnow().isoformat()
-                await self.redis.set(
-                    f"user:{user_id}:room:{room_id}:last_disconnected",
-                    disconnect_time,
+                disconnect_key = f"user:{user_id}:room:{room_id}:last_disconnected"
+                await self.redis.set(disconnect_key, disconnect_time)
+                logger.info(
+                    f"[DISCONNECT] Stored disconnect time:\n"
+                    f"- Key: {disconnect_key}\n"
+                    f"- Time: {disconnect_time}"
                 )
-                
+
                 disconnect_message = json.dumps(
                     {
                         "status": "offline",
                         "room_id": room_id,
                         "user_id": user_id,
-                        "user_email": "",
-                        "user_name": "",
-                        "message": f"User {user_id} has disconnected",
+                        "user_email": user.email if user else "",
+                        "user_name": user.full_name if user else "",
+                        "message": f"User {user.email if user else user_id} has disconnected",
                     }
                 )
                 await self.redis.publish(f"room:{room_id}", disconnect_message)
+
+                remaining_users = await self.redis.smembers(f"room:{room_id}:users")
                 logger.info(
                     f"User {user_id} disconnected from room {room_id}. "
-                    f"Stored disconnect timestamp: {disconnect_time}"
+                    f"Stored disconnect timestamp: {disconnect_time}. "
+                    f"Remaining users in room: {remaining_users}"
                 )
 
             await self.redis.delete(f"ws:{ws_id}")
@@ -107,8 +147,11 @@ class ConnectionManager:
             websocket = self.local_websockets.get(ws_id)
             if websocket:
                 await websocket.send_text(message)
+                logger.info(f"Sent message to ws_id {ws_id}: {message}")
             else:
-                logger.warning(f"No WebSocket found for ws_id: {ws_id}")
+                logger.warning(
+                    f"[WEBSOCKET NOT FOUND]No WebSocket found for ws_id: {ws_id}"
+                )
         except Exception as e:
             logger.error(f"Failed to send personal message to ws_id {ws_id}: {e}")
             await self.disconnect(ws_id)
@@ -164,6 +207,17 @@ class ConnectionManager:
         except Exception as e:
             logger.error(f"Error getting user connection count: {e}")
             return 0
+
+    async def cache_message(self, room_id: str, max_messages: int = 50):
+        try:
+            await self.redis.zremrangebyrank(
+                f"room:{room_id}:messages", 0, -max_messages - 1
+            )
+            logger.info(
+                f"Trimmed message cache for room {room_id} to {max_messages} messages"
+            )
+        except Exception as e:
+            logger.error(f"Error trimming message cache for room {room_id}: {e}")
 
 
 manager = ConnectionManager()
