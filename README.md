@@ -38,9 +38,9 @@ Before you begin, ensure you have:
 
 ## Run the Application
 
-**Start the application**
+**Start and build the application**
    ```bash
-   docker compose up
+   docker compose up --build
    ```
 **View logs (if running in background)**
    ```bash
